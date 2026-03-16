@@ -1,0 +1,15 @@
+.goo-filter-container {
+  position: absolute;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.pixel-canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1;
+  background: transparent !important;
+}

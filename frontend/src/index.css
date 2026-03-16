@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --primary: #22c55e;
+    --primary-foreground: #ffffff;
+    --border: #e2e8f0;
+    --radius: 0.75rem;
+  }
+
+  /* Optional Dark Mode variables */
+  .dark {
+    --background: #000000;
+    --foreground: #f8fafc;
+    --card: #1f1f1f;
+    --card-foreground: #f8fafc;
+    --primary: #22c55e;
+    --primary-foreground: #ffffff;
+    --border: #333333;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply antialiased min-h-screen selection:bg-primary-500/30;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm dark:bg-[#1f1f1f]/90 dark:border-[#333333]/50;
+  }
+  
+  .glass-card {
+    @apply bg-white/80 dark:bg-[#1f1f1f] backdrop-blur-none border border-[#333333]/80 shadow-lg rounded-[var(--radius)] overflow-hidden transition-all duration-300;
+  }
+}
+/* Triggering tailwind reload */
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-700 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-600;
+}
