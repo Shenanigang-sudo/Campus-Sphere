@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
+import { clearAuthData } from '../services/auth';
 import ImageUpload from '../components/ImageUpload';
-import { FiHome } from 'react-icons/fi';
+import { FiHome, FiCheckCircle } from 'react-icons/fi';
 import Galaxy from '../components/ReactBits/Galaxy';
 
 const Register = () => {
@@ -10,14 +11,17 @@ const Register = () => {
   const initialType = searchParams.get('type') || 'student';
   const [accountType, setAccountType] = useState(initialType);
 
-  // Update URL structure if tabs change
+  // Update URL if tab changes
   useEffect(() => {
     setSearchParams({ type: accountType }, { replace: true });
   }, [accountType, setSearchParams]);
 
-  // Common fields + Student specific
+  // Clear any stale auth token so old sessions don't interfere
+  useEffect(() => {
+    clearAuthData();
+  }, []);
+
   const [formData, setFormData] = useState({
-    // Common
     username: '',
     email: '',
     password: '',
@@ -37,6 +41,7 @@ const Register = () => {
   });
 
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -52,7 +57,6 @@ const Register = () => {
     try {
       const endpoint = accountType === 'student' ? '/auth/register/student' : '/auth/register/club';
 
-      // Filter payload based on type to prevent sending empty irrelevant fields to strict validators
       const payload = accountType === 'student' ? {
         name: formData.name,
         course: formData.course,
@@ -76,11 +80,21 @@ const Register = () => {
 
       await api.post(endpoint, payload);
 
-      // Navigate to login after successful registration
-      navigate('/login');
+      // Show success message, then redirect to login after 2.5s
+      setSuccess(true);
+      setTimeout(() => navigate('/login'), 2500);
 
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+      const detail = err.response?.data?.detail;
+      // Pydantic 422 errors return detail as an array of objects, not a string.
+      // React crashes if you try to render an object/array as text, so extract a string.
+      let errorMsg = 'Registration failed. Please try again.';
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+      }
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -95,10 +109,10 @@ const Register = () => {
         <Galaxy transparent={false} />
       </div>
 
-      {/* Absolute Home Button */}
+      {/* Home Button */}
       <div className="absolute top-6 right-6 z-50">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="flex items-center gap-2 px-6 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/20 text-white rounded-full transition-all shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
         >
           <FiHome className="text-lg" />
@@ -107,7 +121,6 @@ const Register = () => {
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8 relative z-10 w-full max-w-3xl mx-auto pointer-events-none py-20">
-        {/* Liquid Glass Card */}
         <div className="w-full p-8 sm:p-10 relative overflow-hidden bg-white/10 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-[2.5rem] pointer-events-auto max-h-[90vh] overflow-y-auto no-scrollbar">
 
           <h2 className="text-3xl font-bold text-center mb-2 text-white tracking-wide">
@@ -115,231 +128,246 @@ const Register = () => {
           </h2>
           <p className="text-center text-gray-300 mb-8 text-sm font-medium tracking-wide">Join campus sphere</p>
 
-          {/* Account Type Toggle */}
-          <div className="flex p-1 mb-8 bg-black/30 rounded-xl border border-white/10">
-            <button
-              type="button"
-              className={`flex-1 py-3 text-sm font-semibold rounded-lg transition-all tracking-wide ${accountType === 'student' ? 'bg-white/20 text-white shadow-lg' : 'text-gray-400 hover:text-white'
-                }`}
-              onClick={() => setAccountType('student')}
-            >
-              Student
-            </button>
-            <button
-              type="button"
-              className={`flex-1 py-3 text-sm font-semibold rounded-lg transition-all tracking-wide ${accountType === 'organizer' ? 'bg-white/20 text-white shadow-lg' : 'text-gray-400 hover:text-white'
-                }`}
-              onClick={() => setAccountType('organizer')}
-            >
-              Organizer (Club)
-            </button>
-          </div>
-
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-100 p-4 rounded-xl mb-8 text-sm text-center backdrop-blur-md">
-              {error}
+          {/* Success Banner */}
+          {success && (
+            <div className="flex flex-col items-center justify-center gap-4 py-8 animate-in fade-in duration-300">
+              <FiCheckCircle className="text-6xl text-green-400" />
+              <h3 className="text-2xl font-bold text-white">Account Created!</h3>
+              <p className="text-gray-300 text-center">
+                Your {accountType === 'student' ? 'student' : 'organizer'} account has been created successfully.<br />
+                Redirecting you to login…
+              </p>
+              <div className="w-8 h-8 rounded-full border-2 border-green-400 border-t-transparent animate-spin mt-2" />
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Common Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className={labelClass}>Username</label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className={inputClass}
-                  required
-                />
+          {/* Form — hidden after success */}
+          {!success && (
+            <>
+              {/* Account Type Toggle */}
+              <div className="flex p-1 mb-8 bg-black/30 rounded-xl border border-white/10">
+                <button
+                  type="button"
+                  className={`flex-1 py-3 text-sm font-semibold rounded-lg transition-all tracking-wide ${accountType === 'student' ? 'bg-white/20 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                  onClick={() => setAccountType('student')}
+                >
+                  Student
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 py-3 text-sm font-semibold rounded-lg transition-all tracking-wide ${accountType === 'organizer' ? 'bg-white/20 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                  onClick={() => setAccountType('organizer')}
+                >
+                  Organizer (Club)
+                </button>
               </div>
-              <div>
-                <label className={labelClass}>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={inputClass}
-                  required
-                />
-              </div>
-            </div>
 
-            <div>
-              <label className={labelClass}>Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={inputClass}
-                required
-              />
-            </div>
-
-            <div className="w-full h-px bg-white/10 my-8"></div>
-
-            {/* Student Fields */}
-            {accountType === 'student' && (
-              <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div>
-                  <label className={labelClass}>Full Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className={inputClass}
-                    required={accountType === 'student'}
-                  />
+              {error && (
+                <div className="bg-red-500/20 border border-red-500/50 text-red-100 p-4 rounded-xl mb-8 text-sm text-center backdrop-blur-md">
+                  {error}
                 </div>
-                <div>
-                  <label className={labelClass}>Course (e.g. B.Tech CS)</label>
-                  <input
-                    type="text"
-                    name="course"
-                    value={formData.course}
-                    onChange={handleChange}
-                    className={inputClass}
-                    required={accountType === 'student'}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <label className={labelClass}>Start Year</label>
-                    <input
-                      type="number"
-                      name="academic_year_start"
-                      value={formData.academic_year_start}
-                      onChange={handleChange}
-                      className={inputClass}
-                      required={accountType === 'student'}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Graduation Year</label>
-                    <input
-                      type="number"
-                      name="academic_year_end"
-                      value={formData.academic_year_end}
-                      onChange={handleChange}
-                      className={inputClass}
-                      required={accountType === 'student'}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Organizer Fields */}
-            {accountType === 'organizer' && (
-              <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Common Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Club Name</label>
+                    <label className={labelClass}>Username</label>
                     <input
                       type="text"
-                      name="club_name"
-                      value={formData.club_name}
+                      name="username"
+                      value={formData.username}
                       onChange={handleChange}
                       className={inputClass}
-                      required={accountType === 'organizer'}
+                      required
                     />
                   </div>
                   <div>
-                    <label className={labelClass}>Contact Number</label>
+                    <label className={labelClass}>Email</label>
                     <input
-                      type="text"
-                      name="contact_number"
-                      value={formData.contact_number}
+                      type="email"
+                      name="email"
+                      value={formData.email}
                       onChange={handleChange}
                       className={inputClass}
-                      required={accountType === 'organizer'}
+                      required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className={labelClass}>Location / Department</label>
+                  <label className={labelClass}>Password</label>
                   <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
+                    type="password"
+                    name="password"
+                    value={formData.password}
                     onChange={handleChange}
                     className={inputClass}
-                    required={accountType === 'organizer'}
+                    required
                   />
                 </div>
 
-                <div>
-                  <label className={labelClass}>Description</label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows="3"
-                    className={`${inputClass} resize-none`}
-                    required={accountType === 'organizer'}
-                  ></textarea>
-                </div>
+                <div className="w-full h-px bg-white/10 my-8"></div>
 
-                {/* Adding a div around ImageUpload to give it a dark/glass container context if needed */}
-                <div className="p-4 rounded-xl border border-white/10 bg-black/20">
-                  <ImageUpload
-                    label="Club Logo"
-                    value={formData.logo_url}
-                    onChange={(url) => setFormData(prev => ({ ...prev, logo_url: url }))}
-                  />
-                </div>
+                {/* Student Fields */}
+                {accountType === 'student' && (
+                  <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div>
+                      <label className={labelClass}>Full Name</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className={inputClass}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Course (e.g. B.Tech CS)</label>
+                      <input
+                        type="text"
+                        name="course"
+                        value={formData.course}
+                        onChange={handleChange}
+                        className={inputClass}
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <label className={labelClass}>Start Year</label>
+                        <input
+                          type="number"
+                          name="academic_year_start"
+                          value={formData.academic_year_start}
+                          onChange={handleChange}
+                          className={inputClass}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Graduation Year</label>
+                        <input
+                          type="number"
+                          name="academic_year_end"
+                          value={formData.academic_year_end}
+                          onChange={handleChange}
+                          className={inputClass}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className={labelClass}>Website URL (Optional)</label>
-                    <input
-                      type="url"
-                      name="website_url"
-                      value={formData.website_url}
-                      onChange={handleChange}
-                      className={inputClass}
-                    />
+                {/* Organizer Fields */}
+                {accountType === 'organizer' && (
+                  <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className={labelClass}>Club Name</label>
+                        <input
+                          type="text"
+                          name="club_name"
+                          value={formData.club_name}
+                          onChange={handleChange}
+                          className={inputClass}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Contact Number</label>
+                        <input
+                          type="text"
+                          name="contact_number"
+                          value={formData.contact_number}
+                          onChange={handleChange}
+                          className={inputClass}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Location / Department</label>
+                      <input
+                        type="text"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleChange}
+                        className={inputClass}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Description</label>
+                      <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
+                        rows="3"
+                        className={`${inputClass} resize-none`}
+                        required
+                      ></textarea>
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-white/10 bg-black/20">
+                      <ImageUpload
+                        label="Club Logo"
+                        value={formData.logo_url}
+                        onChange={(url) => setFormData(prev => ({ ...prev, logo_url: url }))}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className={labelClass}>Website URL (Optional)</label>
+                        <input
+                          type="url"
+                          name="website_url"
+                          value={formData.website_url}
+                          onChange={handleChange}
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Social Links (Optional)</label>
+                        <input
+                          type="text"
+                          name="social_links"
+                          value={formData.social_links}
+                          onChange={handleChange}
+                          className={inputClass}
+                          placeholder="Instagram handle etc."
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className={labelClass}>Social Links (Optional)</label>
-                    <input
-                      type="text"
-                      name="social_links"
-                      value={formData.social_links}
-                      onChange={handleChange}
-                      className={inputClass}
-                      placeholder="Instagram handle etc."
-                    />
-                  </div>
+                )}
+
+                <div className="pt-6 mt-4">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-4 px-6 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 text-white font-bold tracking-wide rounded-xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50"
+                  >
+                    {isLoading ? 'Creating account...' : `Sign Up as ${accountType === 'student' ? 'Student' : 'Organizer'}`}
+                  </button>
                 </div>
+              </form>
+
+              <div className="mt-8 pt-6 border-t border-white/10 text-center">
+                <p className="text-sm text-gray-300 font-medium">
+                  Already have an account?{' '}
+                  <Link to="/login" className="text-white hover:underline font-semibold">
+                    Sign In
+                  </Link>
+                </p>
               </div>
-            )}
-
-            <div className="pt-6 mt-4">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-4 px-6 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 text-white font-bold tracking-wide rounded-xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50"
-              >
-                {isLoading ? 'Creating account...' : `Sign Up as ${accountType === 'student' ? 'Student' : 'Organizer'}`}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-8 pt-6 border-t border-white/10 text-center">
-            <p className="text-sm text-gray-300 font-medium">
-              Already have an account?{' '}
-              <Link to="/login" className="text-white hover:underline font-semibold">
-                Sign In
-              </Link>
-            </p>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

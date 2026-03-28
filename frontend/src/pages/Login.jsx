@@ -38,7 +38,14 @@ const Login = () => {
       }
 
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');
+      const detail = err.response?.data?.detail;
+      let errorMsg = 'Login failed. Please check your credentials.';
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+      }
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }
