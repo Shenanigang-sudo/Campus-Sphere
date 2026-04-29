@@ -7,7 +7,12 @@ A modern web application designed to streamline the discovery, management, and o
 - **Event Discovery:** Robust search functionality allowing users to find events by keywords, specific dates/calendar, categories, or club names.
 - **Organizer Dashboard:** Comprehensive tools for event creators to post, update, and manage student registrations.
 - **Club Profiles:** Dedicated pages for college clubs to showcase their details and upcoming programs.
-- **Premium UI/UX:** A dynamic, responsive interface featuring modern aesthetics, smooth animations, and interactive elements.
+- **Premium UI/UX:** A dynamic, responsive interface featuring modern aesthetics, smooth animations, and interactive elements. <br>
+
+  <img width="1920" height="1080" alt="Screenshot 2026-03-23 143850" src="https://github.com/user-attachments/assets/85f0214e-ea28-4d24-bb72-12cc4955d7db" />
+
+  <img width="1920" height="1080" alt="Screenshot 2026-03-23 143830 - Copy (2)" src="https://github.com/user-attachments/assets/f04b904c-aaf0-4262-abc2-277e3c660fbe" />
+
 
 ## 🛠️ Tech Stack
 - **Frontend:** React.js, Vite, React Router, Tailwind CSS
